@@ -1,0 +1,864 @@
+---
+title: "Untitled"
+author: "Erick Hernández"
+date: "24/6/2020"
+output: html_document
+---
+
+```{r eval=True}
+#Cargar BD#
+datos15<-read.csv("ss_n_cs_n.csv",header = T)
+
+#### Árbol de regresión####
+library(DMwR2)
+
+bdarbol<-subset(datos15, year==2060)
+str(bdarbol)
+bdarbol$budget_split <- factor(bdarbol$budget_split)
+bdarbol$stress <- factor(bdarbol$stress)
+str(bdarbol)
+set.seed(1234)
+vul <- sample(2, nrow(bdarbol), replace=TRUE, prob=c(0.7, 0.3))
+trainData <- bdarbol[vul==1,]
+testData <- bdarbol[vul==2,]
+library(sandwich)
+library(party)
+###Para escasez
+myFormula <- scarcity_vulnerability_cat ~ budget + budget_split +
+stress 
+vul_ctree <- ctree(myFormula, data=trainData)
+# check the prediction
+table(predict(vul_ctree), trainData$scarcity_vulnerability_cat)
+print(vul_ctree)
+plot(vul_ctree)
+plot(vul_ctree, type="simple")
+
+##Para inundaciones
+myFormula <- flooding_vulnerability_cat ~ budget + budget_split +
+stress 
+vul_ctree <- ctree(myFormula, data=trainData)
+# check the prediction
+table(predict(vul_ctree), trainData$flooding_vulnerability_cat)
+print(vul_ctree)
+plot(vul_ctree)
+plot(vul_ctree, type="simple")
+```
+
+```{r eval=True}
+datos15<-read.csv("ss_n_cs_n.csv",header = T)
+#### Árbol de regresión####
+library(DMwR2)
+
+bdarbol<-subset(datos15, year==2060)
+str(bdarbol)
+bdarbol$budget_split <- factor(bdarbol$budget_split)
+bdarbol$stress <- factor(bdarbol$stress)
+str(bdarbol)
+set.seed(1234)
+vul <- sample(2, nrow(bdarbol), replace=TRUE, prob=c(0.7, 0.3))
+trainData <- bdarbol[vul==1,]
+testData <- bdarbol[vul==2,]
+library(sandwich)
+library(party)
+myFormula <- scarcity_vulnerability_n ~ budget + budget_split +
+stress 
+vul_ctree <- ctree(myFormula, data=trainData)
+# check the prediction
+table(predict(vul_ctree), trainData$scarcity_vulnerability_n)
+print(vul_ctree)
+plot(vul_ctree)
+plot(vul_ctree, type="simple")
+
+##Para inundaciones
+myFormula <- flooding_vulnerability_cat ~ budget + budget_split +
+stress 
+vul_ctree <- ctree(myFormula, data=trainData)
+# check the prediction
+table(predict(vul_ctree), trainData$flooding_vulnerability_cat)
+print(vul_ctree)
+plot(vul_ctree)
+plot(vul_ctree, type="simple")
+
+###Árboles de regresión con iteraciones Monte Carlo##
+datos15<-read.csv("ss_n_cs_n.csv",header = T)
+library(DMwR2)
+library(sandwich)
+library(party)
+
+bdarbol<-subset(datos15, year==2060)
+str(bdarbol)
+bdarbol$budget_split <- factor(bdarbol$budget_split)
+bdarbol$stress <- factor(bdarbol$stress)
+str(bdarbol)
+set.seed(1234)
+
+tree_ctree <- ctree(scarcity_vulnerability_n ~ budget_split+stress+budget+climate_id, data=bdarbol, controls = ctree_control(testtype = "MonteCarlo",nresample = 300,mincriterion = 0.99, minsplit=300000,teststat = "max"))
+
+plot(tree_ctree)
+
+jpeg("arbol_escasez.jpeg",quality = 100,height = 1000,width = 2000)
+plot(tree_ctree, type="simple")
+dev.off()
+
+#### inundaciones
+
+tree_ctree <- ctree(flooding_vulnerability_n ~ budget_split+stress+budget+climate_id, data=bdarbol, controls = ctree_control(testtype = "MonteCarlo",nresample = 300,mincriterion = 0.99, minsplit=300000,teststat = "max"))
+
+plot(tree_ctree)
+plot(tree_ctree, type="simple")
+
+
+```
+
+```{r eval=True}
+
+## Gráficas diagnósticas
+
+library(ggplot2)
+df2060<-subset(datos15, year==2060)
+str(df2060)
+### Escasez de agua
+ggplot(df2060, aes(stress,scarcity_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+
+ggplot(df2060, aes(budget_split, scarcity_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+#Se cambia variable a caracter para obtener grafico
+df2060$budget <- as.character(df2060$budget)
+
+ggplot(df2060, aes(budget,scarcity_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+#Se cambia variable a caracter para obtener grafico
+df2060$climate_id <- as.character(df2060$climate_id)
+
+ggplot(df2060, aes(climate_id,scarcity_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+
+
+###Inundaciones
+ggplot(df2060, aes(stress, flooding_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+
+ggplot(df2060, aes(budget_split, flooding_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+
+ggplot(df2060, aes(budget,flooding_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+
+ggplot(df2060, aes(climate_id,flooding_vulnerability_n)) + geom_boxplot(col="black", fill="lightblue") + theme_bw()
+
+###vulnerabilidad histogramas
+datos15<-read.csv("ss_n_cs_n_fp15.csv",header = T)
+df2060<-subset(datos15, year==2060)
+str(df2060)
+library(ggplot2)
+scarcity <- ggplot(df2060, aes(x=scarcity_vulnerability_n))
+scarcity + geom_histogram()
+flooding <- ggplot(df2060, aes(x=flooding_vulnerability_n))
+flooding + geom_histogram()
+
+###Vulnerabilidad por año promedios
+
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+datos15 %>% group_by(year) %>% summarise(promedio= mean(flooding_vulnerability_cat)) %>% 
+  ggplot(aes(x = year, y = promedio)) +
+  geom_col() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+```{r eval=True}
+### Mapas vulnerabilidad
+
+#### Mapa con leyenda alto, medio, bajo y estres reduc_agua ####
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+
+cluster_reduc_agua<-subset(datos_me, stress=="reduc_agua")
+
+cluster_reduc_agua$vul_mean<-tapply(cluster_reduc_agua$scarcity_vulnerability_n,cluster_reduc_agua$censusblock_id, mean)
+promedio_agebs<-cluster_reduc_agua[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "scarcity_vul"
+
+##### Para escasez
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$scarcity_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Reds")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_escasez2021_reduc_agua.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "grey", axes= T)
+ title(main="Vulnerabilidad a escasez de agua", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+#### Mapas de vulnerabilidad con presupuestos bajos (sin escenario reduc_agua) ####
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+
+cluster<-subset(datos_me, stress!="reduc_agua")
+cluster<-subset(cluster, budget==50)
+
+cluster$vul_mean<-tapply(cluster$scarcity_vulnerability_n,cluster$censusblock_id, mean)
+promedio_agebs<-cluster[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "scarcity_vul"
+
+##### Para escasez
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$scarcity_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Reds")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_escasez2060.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "grey", axes= T)
+ title(main="Vulnerabilidad a escasez de agua", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+#### Mapas de vulnerabilidad con estrés base y Reduc_cutza con presupuestos mayores a 50####
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+cluster<-subset(datos_me, budget>=1000)
+cluster<-subset(cluster, stress!="reduc_agua")
+cluster<-subset(cluster, stress!="asentamientos")
+cluster<-subset(cluster, stress!="increm_cutza")
+cluster<-subset(cluster, stress!="mejora_efi")
+
+
+cluster$vul_mean<-tapply(cluster$scarcity_vulnerability_n,cluster$censusblock_id, mean)
+promedio_agebs<-cluster[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "scarcity_vul"
+
+##### Para escasez
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$scarcity_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Reds")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_escasez2060_base_y_reduc_cutza.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "grey", axes= T)
+ title(main="Vulnerabilidad a escasez de agua", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+#### Mapas de vulnerabilidad con estrés asentamientos e Increm_cutza con presupuestos mayores a 50####
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+
+cluster<-subset(datos_me, budget>=1000)
+cluster<-subset(cluster, stress!="base")
+cluster<-subset(cluster, stress!="mejora_efi")
+cluster<-subset(cluster, stress!="reduc_agua")
+cluster<-subset(cluster, stress!="reduc_cutza")
+
+
+cluster$vul_mean<-tapply(cluster$scarcity_vulnerability_n,cluster$censusblock_id, mean)
+promedio_agebs<-cluster[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "scarcity_vul"
+
+##### Para escasez
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$scarcity_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Reds")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_escasez2060_asentamientos_e_increm_cutza.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "grey", axes= T)
+ title(main="Vulnerabilidad a escasez de agua", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+
+#### Mapas de vulnerabilidad con estrés mejora_efi con presupuestos mayores a 50####
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+
+cluster<-subset(datos_me, stress=="mejora_efi")
+cluster<-subset(cluster, budget>=1000)
+
+
+cluster$vul_mean<-tapply(cluster$scarcity_vulnerability_n,cluster$censusblock_id, mean)
+promedio_agebs<-cluster[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "scarcity_vul"
+
+##### Para escasez
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$scarcity_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Reds")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_escasez2060_mejora_efi.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "grey", axes= T)
+ title(main="Vulnerabilidad a escasez de agua", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+
+##Para inundaciones presupuestos bajos (50)##
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+
+cluster<-subset(datos_me, budget==50)
+
+
+cluster$vul_mean<-tapply(cluster$flooding_vulnerability_n,cluster$censusblock_id, mean)
+promedio_agebs<-cluster[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "flooding_vul"
+
+##### Para inundaciones
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$flooding_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Blues")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_inundaciones2060_presupuesto_bajo.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "gray", axes= T)
+ title(main="Vulnerabilidad a inundaciones", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+
+##Para inundaciones presupuestos medios y altos (>=1000)##
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+datos<-read.csv("ss_n_cs_n.csv",header = T)
+
+datos_me<-subset(datos, year==2060)
+
+## datos_me<-subset(datos, year==2021)
+## datos_me<-subset(datos, year==2040)
+
+cluster<-subset(datos_me, budget>=1000)
+
+
+cluster$vul_mean<-tapply(cluster$flooding_vulnerability_n,cluster$censusblock_id, mean)
+promedio_agebs<-cluster[,c(1,11)]
+
+library(dplyr)
+
+promedio_agebs<-distinct(promedio_agebs)
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+names (promedio_agebs)[1] = "AGEB_ID"
+names (promedio_agebs)[2] = "flooding_vul"
+
+##### Para inundaciones
+union<-merge(promedio_agebs,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$flooding_vul
+nclr<- 3 ##número de colores
+plotcrl<-brewer.pal(nclr,"Blues")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+###Este codigo se copia y pega en la consola para que el mapa se guarde en la carpeta de trabajo##
+jpeg("mapa_vul_inundaciones2060_presupuesto_medio_y_alto.jpeg",quality = 100,height = 600,width = 800)
+ plot(agebs.data, col=colcode, border= "gray", axes= T)
+ title(main="Vulnerabilidad a inundaciones", cex=3)
+legend("bottomright", legend = c("Bajo", "Medio","Alto"),fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+
+
+
+
+#####Mapas con valores promedio de todos los años (los omitimos por que la idea es generar una comparación entre los años y no un promedio) ####
+
+library(rgdal)
+library(ggplot2)
+library(RColorBrewer)
+library(classInt)
+
+
+###Cargar shp
+
+shp<- readOGR(dsn = "D:/Erick/Maestría/Tesis/Bases de datos/Mapas vulnerabilidad/agebs",layer = "agebs_input")
+plot(shp)
+View(shp@data)
+
+##Cargar bd 
+
+datos_escasez<-read.csv("promedio_escasez.csv",header = T)
+datos_inundaciones<-read.csv("promedio_inundaciones.csv",header = T)
+
+names (datos_escasez)[1] = "AGEB_ID"
+names (datos_escasez)[2] = "scarcity_vul"
+names (datos_inundaciones)[1] = "AGEB_ID"
+names (datos_inundaciones)[2] = "flooding_vul"
+##### Para escasez
+union<-merge(datos_escasez,shp, by = "AGEB_ID")
+row.names(union)<-row.names(shp)
+agebs.data<-SpatialPolygonsDataFrame(shp,union)
+View(agebs.data@data)
+
+plotvar<-agebs.data$scarcity_vul
+nclr<- 3 ##número de colores}
+plotcrl<-brewer.pal(nclr,"Blues")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+jpeg("mapa_vul_escasez.jpeg",quality = 100,height = 600,width = 800)
+plot(agebs.data, col=colcode, border= "grey", axes= T)
+title(main="Vulnerabilidad a escasez de agua", cex=3)
+legend("bottomright", legend = names(attr(colcode,"table")), 
+       fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+##Para inundaciones
+union_inundaciones<-merge(datos_inundaciones,shp, by = "AGEB_ID")
+row.names(union_inundaciones)<-row.names(shp)
+agebs.data_inundaciones<-SpatialPolygonsDataFrame(shp,union_inundaciones)
+View(agebs.data_inundaciones@data)
+
+plotvar<-agebs.data_inundaciones$flooding_vul
+nclr<- 3 ##número de colores}
+plotcrl<-brewer.pal(nclr,"Blues")
+class<-classIntervals(round(plotvar,3),nclr,style = "quantile")
+
+colcode<-findColours(class,plotcrl)
+
+jpeg("mapa_vul_inundaciones.jpeg",quality = 100,height = 600,width = 800)
+plot(agebs.data_inundaciones, col=colcode, border= "grey", axes= T)
+title(main="Vulnerabilidad a inundaciones", cex=3)
+legend("bottomright", legend = names(attr(colcode,"table")), 
+       fill = attr(colcode,"palette"),cex = 1.25)
+dev.off()
+
+
+
+```
+
+
+```{r eval=True}
+
+#######Metodologías pendientes por implementar (sólo fue una exploración muy superficial por ello no las incluyo en tesis)#########
+
+###PCA
+str(datos15)
+datos15$budget_split <- as.numeric(datos15$budget_split) ##Transformar datos a enteros (integer)##
+datos15$stress <- as.numeric(datos15$stress)
+datos15$budget_split <- as.integer(datos15$budget_split)
+datos15$stress <- as.integer(datos15$stress)
+str(datos15)
+df2060<-subset(datos15, year==2060)
+head(df2060)
+
+apply(X = df2060, MARGIN = 2, FUN = mean)
+apply(X = df2060, MARGIN = 2, FUN = var)
+
+pca <- prcomp(df2060)
+names(pca)
+pca$rotation ##rotation contiene el valor de los loadings ϕ para cada componente (eigenvector). El número máximo de componentes principales se corresponde con el mínimo(n-1,p).
+head(pca$x) ##La función prcomp() calcula automáticamente el valor de las componentes principales para cada observación (principal component scores) multiplicando los datos por los vectores de loadings. El resultado se almacena en la matriz x.
+dim(pca$x) #dimensiones
+biplot(x = pca, scale = 0, cex = 0.6, col = c("blue4", "brown3"))
+library(ggplot2)
+pca$sdev^2
+prop_varianza <- pca$sdev^2 / sum(pca$sdev^2)
+prop_varianza
+
+ggplot(data = data.frame(prop_varianza, pc = 1:10),
+       aes(x = pc, y = prop_varianza)) +
+  geom_col(width = 0.3) +
+  scale_y_continuous(limits = c(0,1)) +
+  theme_bw() +
+  labs(x = "Componente principal",
+       y = "Prop. de varianza explicada")
+
+#####PCA 
+
+df2060<-subset(datos15, year==2060)
+str(df2060)
+
+#transformar a factores
+df2060$budget <- as.numeric(df2060$budget)
+df2060$budget_split <- as.numeric(df2060$budget_split)
+df2060$stress <- as.numeric(df2060$stress)
+df2060$climate_id <- as.numeric(df2060$climate_id)
+df2060$scarcity_exposure_cat <- as.numeric(df2060$scarcity_exposure_cat)
+df2060$scarcity_vulnerability_cat <- factor(df2060$scarcity_vulnerability_cat)
+df2060$flooding_exposure_cat <- as.numeric(df2060$flooding_exposure_cat)
+df2060$flooding_vulnerability_cat <- factor(df2060$flooding_vulnerability_cat)
+df2060$censusblock_id <- factor(df2060$censusblock_id)
+df2060$year <- factor(df2060$year)
+ 
+str(df2060)
+
+wdbc.pr <- prcomp(df2060[-c(1,2,8,10)], center = TRUE, scale = TRUE)
+summary(wdbc.pr)
+
+screeplot(wdbc.pr, type = "l", npcs = 15, main = "Screeplot of the first 10 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+
+cumpro <- cumsum(wdbc.pr$sdev^2 / sum(wdbc.pr$sdev^2))
+plot(cumpro[0:15], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 6, col="blue", lty=5)
+abline(h = 0.88759, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC6"),
+       col=c("blue"), lty=5, cex=0.6)
+
+plot(wdbc.pr$x[,1],wdbc.pr$x[,2], xlab="PC1 (22.8%)", ylab = "PC2 (16.8%)", main = "PC1 / PC2 - plot")
+
+library("factoextra")
+fviz_pca_ind(wdbc.pr, geom.ind = "point", pointshape = 21, 
+             pointsize = 2, 
+             fill.ind = df2060$scarcity_vulnerability_cat, 
+             col.ind = "black", 
+             palette = "jco", 
+             addEllipses = TRUE,
+             label = "var",
+             col.var = "black",
+             repel = TRUE,
+             legend.title = "Diagnosis") +
+  ggtitle("2D PCA-plot") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r eval=True}
+#Bosques aleatorios
+
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(dplyr)
+library(ISLR)
+library(ggplot2)
+
+
+
+##training Sample with 300 observations
+bdarbol<-df2060
+bdarbol$budget_split <- factor(bdarbol$budget_split)
+bdarbol$stress <- factor(bdarbol$stress)
+str(bdarbol)
+set.seed(101)
+dim(bdarbol)
+train<-sample(1:nrow(bdarbol),300)
+str(bdarbol)  
+library(randomForest)
+vul_rf<-randomForest(flooding_vulnerability_cat ~ budget + budget_split +
+stress + flooding_exposure_cat , data = bdarbol , subset = train)
+vul_rf
+plot(vul_rf)
+print(vul_rf)
+varImpPlot(vul_rf)
+varImp(vul_rf)
+
+
+
+
+
+
+```
+
+```{r eval=True}
+#Rntse
+
+library(readr)
+library(dplyr)
+
+# Carga de datos
+datos15 <- read.csv("ss_n_cs_n_fp15.csv",header = T)
+df2060<-subset(datos15, year==2060)
+dim(df2060)
+# Renombrar variables respuesta
+df2060 <- df2060 %>% rename(sv = `scarcity_vulnerability_cat`)
+df2060 <- df2060 %>% rename(fv = `flooding_vulnerability_cat`)
+
+# Debido a los requerimientos computacionales del t-SNE, se limita este ejemplo
+# únicamente a 2500 observaciones.
+df2060 <- df2060[1:2500,]
+
+#transformar a factores
+df2060$budget <- as.numeric(df2060$budget)
+df2060$budget_split <- factor(df2060$budget_split)
+df2060$stress <- factor(df2060$stress)
+df2060$climate_id <- factor(df2060$climate_id)
+df2060$scarcity_exposure_cat <- as.numeric(df2060$scarcity_exposure_cat)
+df2060$sv <- as.numeric(df2060$sv)
+df2060$flooding_exposure_cat <- as.numeric(df2060$flooding_exposure_cat)
+df2060$fv <- as.numeric(df2060$fv)
+df2060$censusblock_id <- factor(df2060$censusblock_id)
+df2060$year <- factor(df2060$year)
+
+str(df2060)
+
+library(Rtsne)
+library(ggplot2)
+
+tsne <- Rtsne(X = df2060[, -c(1,2,8,10)], is_distance = FALSE, dims = 2,check_duplicates = FALSE, perplexity = 30,
+              theta = 0.5, max_iter = 500)
+
+# El objeto devuelto por Rtsne() almacena los valores de las dimensiones en el 
+# elemento Y. Como en este caso se ha especificado que la reducción se haga
+# a dos dimensiones (k=2), Y tiene solo dos columnas.
+head(tsne$Y)
+
+# Para poder representar el verdadero número al que corresponde cada imagen,
+# se adjunta la variable "numero" del set de datos
+resultados <- as.data.frame(tsne$Y)
+colnames(resultados) <- c("dim_1", "dim_2")
+resultados$sv <- as.character(df2060$sv)
+ggplot(data = resultados, aes(x = dim_1, y = dim_2)) +
+  geom_point(aes(color = sv)) + 
+  theme_bw()
+
+
+# Se reduce de nuevo la dimensionalidad, pero esta vez empleando PCA y representando las dos primeras componentes
+
+
+pca <- prcomp(x = df2060[,-c(1,2,8,10)])
+resultados <- as.data.frame(pca$x[, 1:2])
+resultados$sv <- as.character(df2060$sv)
+ggplot(data = resultados, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = sv)) + 
+  theme_bw()
+
+
+# En tres dimensiones 
+
+library(scatterplot3d)
+library(RColorBrewer)
+#tsne <- Rtsne(X = df2060[, -c(1,2,8,10)], is_distance = FALSE, dims = 3, perplexity = 30,check_duplicates = FALSE,theta = 0.5, max_iter = 500)
+
+resultados <- as.data.frame(tsne$Y)
+colnames(resultados) <- c("dim_1", "dim_2", "dim_3")
+resultados$sv <- as.factor(df2060$sv)
+
+colores <- brewer.pal(n = 10, name = "Set3")
+colores <- colores[as.numeric(resultados$sv)]
+scatterplot3d(x = resultados$dim_1,
+              y = resultados$dim_2,
+              z = resultados$dim_3,
+              pch = 20, color = colores, cex.lab = 0.8,
+              grid = TRUE, box = FALSE)
+legend("bottom", legend = levels(resultados$sv),
+      col = colores, pch = 16, 
+      inset = -0.23, xpd = TRUE, horiz = TRUE)
+
+###### Tablas de diferencia de AGEBS
+
+datos <- read.csv("agebs_conteo_factores_2060.csv",header = T)
+
+
+G4<-subset (datos, Group.4 != "reduc_agua")
+G4<-subset (G4, Group.4 != "asentamientos")
+G4<-subset (G4, Group.4 != "base")
+G4<-subset (G4, Group.4 != "reduc_cutza")
+
+G4$sum<-tapply(G4$x,G4$Group.1, sum)
+
+G4<-G4[,c(1,7)]
+
+library(dplyr)
+
+G4<-distinct(G4)
+
+
+write.csv(x = G4, file = "G4_2060.csv", row.names = FALSE) 
+
+
+####G1
+
+G1<-subset (datos, Group.4 == "reduc_agua")
+
+
+G1$suma <- tapply(G1$x, G1$Group.1, sum)
+
+
+G1 <- G1 [,c(1,6)]
+
+library(dplyr)
+
+G1<-distinct(G1)
+
+
+write.csv(x = G1, file = "G1_2060.csv", row.names = FALSE) 
+
+
+
+```
+
+
+
